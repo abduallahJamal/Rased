@@ -1,0 +1,57 @@
+[project]
+name = "rased"
+version = "1.2.0"
+description = "Rased (راصد) — Production-grade headless Chromium reconnaissance engine with full network interception, asset mirroring, in-page JS telemetry & interactive web dashboard"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Abduallah Jamal", email = "abdallah.gamal.mohamed1@gmail.com" }
+]
+keywords = ["recon", "bug-bounty", "osint", "chromium", "playwright", "security", "appsec", "rased"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Topic :: Internet :: WWW/HTTP :: Browsers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "playwright>=1.40.0",
+    "rich>=13.7.0",
+    "aiofiles>=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "ruff>=0.4.0"]
+
+[project.urls]
+Homepage = "https://github.com/abduallahJamal/rased"
+Repository = "https://github.com/abduallahJamal/rased"
+Documentation = "https://github.com/abduallahJamal/rased#readme"
+Issues = "https://github.com/abduallahJamal/rased/issues"
+
+[project.scripts]
+rased = "rased.cli:main"
+rased-dashboard = "dashboard.server:main"
+page-fetch = "rased.cli:main"
+pfetch = "rased.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rased", "dashboard"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"

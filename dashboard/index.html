@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rased (راصد) — Headless Recon Engine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#080a0f;
+    --surface:#0f1219;
+    --surface-2:#171b26;
+    --surface-3:#1e2335;
+    --border:rgba(255,255,255,0.06);
+    --border-strong:rgba(255,255,255,0.10);
+    --cyan:#00e5ff;
+    --cyan-glow:rgba(0,229,255,0.15);
+    --cyan-dim:rgba(0,229,255,0.08);
+    --magenta:#ff2e7a;
+    --magenta-glow:rgba(255,46,122,0.15);
+    --lime:#b4ff39;
+    --lime-glow:rgba(180,255,57,0.15);
+    --text:#e6e8f0;
+    --muted:#8b8ea3;
+    --dim:#5c5f75;
+    --success:#00e676;
+    --warn:#ffab00;
+    --error:#ff1744;
+  }
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:var(--surface)}
+  ::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:99px}
+  ::-webkit-scrollbar-thumb:hover{background:#2a3047}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  code, pre, .mono{font-family:'JetBrains Mono',monospace}
+  a{color:inherit;text-decoration:none}
+
+  /* ── background grid ── */
+  .bg-grid{
+    position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% -10%, black 60%, transparent 100%);
+  }
+  .bg-glow{
+    position:fixed;pointer-events:none;z-index:0;
+    width:900px;height:900px;border-radius:50%;
+    background:radial-gradient(circle, rgba(0,229,255,0.07) 0%, transparent 70%);
+    top:-400px;left:50%;transform:translateX(-50%);
+    filter:blur(40px);
+  }
+  .bg-glow-2{
+    position:fixed;pointer-events:none;z-index:0;
+    width:700px;height:700px;border-radius:50%;
+    background:radial-gradient(circle, rgba(255,46,122,0.05) 0%, transparent 70%);
+    top:400px;right:-200px;filter:blur(50px);
+  }
+
+  /* ── header ── */
+  .nav{
+    position:sticky;top:0;z-index:100;
+    background:rgba(8,10,15,0.85);
+    backdrop-filter:blur(16px) saturate(1.4);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-inner{
+    max-width:1280px;margin:0 auto;
+    padding:14px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    position:relative;z-index:1;
+  }
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-mark{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg, var(--cyan) 0%, #7c4dff 50%, var(--magenta) 100%);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:16px;color:#fff;
+    box-shadow:0 0 20px var(--cyan-glow), 0 4px 12px rgba(0,0,0,0.4);
+    position:relative;
+  }
+  .logo-mark::after{
+    content:'';position:absolute;inset:1px;border-radius:9px;
+    background:linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  }
+  .logo-text{line-height:1}
+  .logo-text strong{font-size:17px;letter-spacing:-0.02em;font-weight:700}
+  .logo-text span{font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;font-weight:500}
+  .logo-text .ver{font-size:10px;color:var(--cyan);background:var(--cyan-dim);border:1px solid rgba(0,229,255,0.15);padding:1px 6px;border-radius:99px;margin-left:6px;letter-spacing:0.05em}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{
+    padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);
+    transition:all .15s;border:1px solid transparent;
+  }
+  .nav-links a:hover{color:var(--text);background:var(--surface-2);border-color:var(--border)}
+  .nav-links a.active{color:var(--text);background:var(--surface-2);border-color:var(--border-strong)}
+  .nav-cta{
+    display:flex;align-items:center;gap:8px;
+    background:var(--text);color:var(--bg);
+    padding:8px 16px;border-radius:99px;font-size:13px;font-weight:600;
+    transition:all .15s;cursor:pointer;border:none;
+  }
+  .nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,255,255,0.15)}
+  .nav-cta svg{width:14px;height:14px}
+
+  /* ── container ── */
+  .container{max-width:1280px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+  /* ── hero ── */
+  .hero{
+    padding:56px 0 32px;
+    display:grid;grid-template-columns:1.05fr 0.95fr;gap:32px;align-items:start;
+    position:relative;z-index:1;
+  }
+  .hero-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--surface-2);border:1px solid var(--border-strong);
+    padding:6px 12px;border-radius:99px;font-size:12px;font-weight:500;
+  }
+  .hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+  .hero-badge b{color:var(--lime);font-weight:700}
+  .hero h1{
+    font-size:52px;line-height:0.95;letter-spacing:-0.03em;font-weight:700;margin:18px 0 14px;
+  }
+  .hero h1 .grad{
+    background:linear-gradient(100deg, var(--cyan) 0%, #7c4dff 45%, var(--magenta) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .hero p.desc{color:var(--muted);font-size:15px;max-width:520px;line-height:1.7}
+  .hero-actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:8px;
+    background:linear-gradient(135deg, var(--cyan), #7c4dff);
+    color:#fff;padding:11px 20px;border-radius:10px;font-weight:600;font-size:14px;
+    border:none;cursor:pointer;transition:all .15s;
+    box-shadow:0 0 20px var(--cyan-glow), 0 4px 16px rgba(124,77,255,0.25);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 28px var(--cyan-glow), 0 6px 20px rgba(124,77,255,0.3)}
+  .btn-secondary{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--surface-2);border:1px solid var(--border-strong);
+    color:var(--text);padding:11px 20px;border-radius:10px;font-weight:600;font-size:14px;
+    cursor:pointer;transition:all .15s;
+  }
+  .btn-secondary:hover{background:var(--surface-3);border-color:rgba(255,255,255,0.15);transform:translateY(-1px)}
+  .hero-stats{
+    display:flex;gap:18px;margin-top:24px;
+    border-top:1px solid var(--border);padding-top:18px;
+  }
+  .hstat{flex:1}
+  .hstat strong{font-size:22px;font-weight:700;letter-spacing:-0.02em;display:block}
+  .hstat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+  .hstat strong.cyan{color:var(--cyan)} .hstat strong.mag{color:var(--magenta)} .hstat strong.lime{color:var(--lime)}
+
+  /* ── hero terminal card ── */
+  .hero-card{
+    background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;overflow:hidden;
+    box-shadow:0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    position:sticky;top:88px;
+  }
+  .card-topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);
+  }
+  .traffic{display:flex;gap:6px}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block}
+  .traffic i:nth-child(1){background:#ff5f57;border:1px solid rgba(0,0,0,0.1)}
+  .traffic i:nth-child(2){background:#ffbd2e;border:1px solid rgba(0,0,0,0.1)}
+  .traffic i:nth-child(3){background:#28ca42;border:1px solid rgba(0,0,0,0.1)}
+  .card-topbar .title{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .card-topbar .title svg{width:12px;height:12px;color:var(--cyan)}
+  .card-topbar .actions{display:flex;gap:6px}
+  .card-topbar .actions button{
+    background:var(--surface-3);border:1px solid var(--border);border-radius:6px;
+    padding:4px 8px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;
+  }
+  .card-topbar .actions button:hover{color:var(--text);border-color:var(--border-strong)}
+  .term-body{padding:16px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;max-height:380px;overflow:auto}
+  .term-line{display:flex;gap:8px;align-items:flex-start}
+  .term-prompt{color:var(--cyan);user-select:none;flex-shrink:0}
+  .term-cmd{color:var(--text)}
+  .term-comment{color:var(--dim);font-style:italic}
+  .term-output{color:var(--muted);padding-left:18px}
+  .term-highlight{color:var(--lime)}
+  .term-warn{color:var(--warn)}
+  .term-success{color:var(--success)}
+  .term-asset{color:#8b8ea3}
+  .cursor{display:inline-block;width:8px;height:14px;background:var(--cyan);margin-left:2px;animation:blink 1s step-end infinite;vertical-align:text-bottom}
+  @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+
+  /* ── install bar ── */
+  .install-bar{
+    margin-top:10px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .install-bar code{font-size:13px;color:var(--lime)}
+  .install-bar button{
+    background:var(--surface-3);border:1px solid var(--border-strong);border-radius:7px;
+    padding:6px 10px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;
+  }
+  .install-bar button:hover{background:#2a3047}
+
+  /* ── sections ── */
+  .section{padding:40px 0;position:relative;z-index:1}
+  .section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+  .section-head h2{font-size:24px;letter-spacing:-0.02em;font-weight:700}
+  .section-head h2 em{font-style:normal;color:var(--cyan)}
+  .section-head p{color:var(--muted);font-size:13px;max-width:500px}
+  .section-head a{font-size:13px;color:var(--cyan);font-weight:600;display:flex;align-items:center;gap:4px}
+  .section-head a:hover{opacity:0.8}
+
+  /* ── feature grid ── */
+  .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .fcard{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;
+    transition:all .2s;position:relative;overflow:hidden;
+  }
+  .fcard::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    opacity:0;transition:opacity .2s;
+  }
+  .fcard:hover{border-color:var(--border-strong);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);background:var(--surface-2)}
+  .fcard:hover::before{opacity:1}
+  .fcard .icon{
+    width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    margin-bottom:14px;font-size:16px;
+  }
+  .fcard .icon.cyan{background:var(--cyan-dim);border:1px solid rgba(0,229,255,0.15);color:var(--cyan)}
+  .fcard .icon.magenta{background:var(--magenta-glow);border:1px solid rgba(255,46,122,0.15);color:var(--magenta)}
+  .fcard .icon.lime{background:var(--lime-glow);border:1px solid rgba(180,255,57,0.15);color:var(--lime)}
+  .fcard .icon.purple{background:rgba(124,77,255,0.12);border:1px solid rgba(124,77,255,0.15);color:#7c4dff}
+  .fcard .icon.orange{background:rgba(255,171,0,0.12);border:1px solid rgba(255,171,0,0.15);color:var(--warn)}
+  .fcard .icon.green{background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.15);color:var(--success)}
+  .fcard h3{font-size:14px;font-weight:700;margin-bottom:6px}
+  .fcard p{font-size:12.5px;color:var(--muted);line-height:1.6}
+  .fcard .tag{
+    display:inline-flex;margin-top:10px;font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:0.06em;text-transform:uppercase;
+    padding:3px 8px;border-radius:99px;font-weight:600;
+  }
+  .fcard .tag.cyan{color:var(--cyan);background:var(--cyan-dim);border:1px solid rgba(0,229,255,0.12)}
+  .fcard .tag.magenta{color:var(--magenta);background:var(--magenta-glow);border:1px solid rgba(255,46,122,0.12)}
+  .fcard .tag.lime{color:var(--lime);background:var(--lime-glow);border:1px solid rgba(180,255,57,0.12)}
+
+  /* ── playground ── */
+  .playground{
+    background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;overflow:hidden;
+    box-shadow:0 16px 48px rgba(0,0,0,0.4);
+  }
+  .pg-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;background:var(--surface-2);border-bottom:1px solid var(--border);
+    flex-wrap:wrap;gap:12px;
+  }
+  .pg-header h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .pg-header h3 i{
+    width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block;
+    box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;
+  }
+  .pg-header .pg-actions{display:flex;gap:8px;align-items:center}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--surface-3);border:1px solid var(--border);border-radius:99px;
+    padding:5px 12px;font-size:12px;font-weight:500;color:var(--muted);
+  }
+  .pill strong{color:var(--text)}
+  .pg-body{display:grid;grid-template-columns:340px 1fr;min-height:520px}
+  @media(max-width:900px){.pg-body{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.feature-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.feature-grid{grid-template-columns:1fr}.hero h1{font-size:36px}}
+  .pg-left{
+    border-right:1px solid var(--border);background:rgba(15,18,25,0.6);
+    padding:18px;display:flex;flex-direction:column;gap:16px;overflow:auto;
+  }
+  .field label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:6px}
+  .field input[type="text"], .field textarea, .field select{
+    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    transition:all .15s;outline:none;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim)}
+  .field textarea{resize:vertical;min-height:64px}
+  .field .hint{font-size:11px;color:var(--dim);margin-top:4px}
+  .toggles{display:flex;flex-direction:column;gap:8px}
+  .toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+    transition:all .15s;cursor:pointer;user-select:none;
+  }
+  .toggle:hover{border-color:var(--border-strong)}
+  .toggle.active{border-color:rgba(0,229,255,0.25);background:var(--cyan-dim)}
+  .toggle .label{font-size:13px;font-weight:500}
+  .toggle .sub{font-size:11px;color:var(--muted)}
+  .toggle .switch{
+    width:36px;height:20px;border-radius:99px;background:var(--surface-3);border:1px solid var(--border);
+    position:relative;transition:all .2s;flex-shrink:0;
+  }
+  .toggle.active .switch{background:var(--cyan);border-color:var(--cyan)}
+  .toggle .switch::after{
+    content:'';position:absolute;top:1px;left:1px;width:16px;height:16px;border-radius:50%;
+    background:#fff;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .toggle.active .switch::after{transform:translateX(16px)}
+  .run-btn{
+    width:100%;background:linear-gradient(135deg, var(--cyan), #7c4dff);
+    color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:all .15s;box-shadow:0 0 20px var(--cyan-glow);
+    margin-top:auto;
+  }
+  .run-btn:hover{transform:translateY(-1px);box-shadow:0 0 28px var(--cyan-glow)}
+  .run-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+  .run-btn svg{width:16px;height:16px}
+  .presets{display:flex;flex-wrap:wrap;gap:6px}
+  .preset{
+    font-family:'JetBrains Mono',monospace;font-size:11px;
+    background:var(--surface-3);border:1px solid var(--border);border-radius:6px;
+    padding:5px 10px;color:var(--muted);cursor:pointer;transition:all .15s;
+  }
+  .preset:hover{color:var(--text);border-color:var(--border-strong);background:var(--surface-2)}
+  .preset.active{color:var(--cyan);border-color:rgba(0,229,255,0.3);background:var(--cyan-dim)}
+
+  .pg-right{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface-2);flex-shrink:0;overflow:auto}
+  .tab{
+    padding:12px 18px;font-size:13px;font-weight:600;color:var(--muted);
+    border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .15s;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--text);border-bottom-color:var(--cyan);background:var(--surface)}
+  .tab .badge{
+    background:var(--surface-3);border:1px solid var(--border);border-radius:99px;
+    padding:1px 7px;font-size:11px;font-weight:700;
+  }
+  .tab.active .badge{background:var(--cyan);color:#000;border-color:var(--cyan)}
+  .pg-content{flex:1;overflow:auto;background:var(--bg)}
+  .pg-content-inner{padding:16px}
+  .pg-placeholder{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    height:100%;min-height:320px;color:var(--muted);text-align:center;padding:24px;
+  }
+  .pg-placeholder .icon{font-size:36px;margin-bottom:12px;opacity:0.5}
+  .pg-placeholder h4{color:var(--text);margin-bottom:6px}
+  .pg-placeholder p{font-size:13px;max-width:360px}
+
+  /* ── terminal output ── */
+  .term-out{
+    font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;
+    background:var(--bg);padding:16px;overflow:auto;max-height:420px;
+  }
+  .term-out .line{padding:2px 0;border-left:2px solid transparent;padding-left:10px;margin-left:-2px}
+  .term-out .line.info{color:var(--cyan)}
+  .term-out .line.success{color:var(--success);border-left-color:var(--success)}
+  .term-out .line.error{color:var(--error);border-left-color:var(--error)}
+  .term-out .line.warn{color:var(--warn)}
+  .term-out .line.dim{color:var(--dim)}
+  .term-out .line.js{color:var(--magenta);background:rgba(255,46,122,0.04);border-left-color:var(--magenta)}
+  .term-out .line.asset{color:#a0a3b8}
+
+  /* ── asset tree ── */
+  .asset-tree{font-family:'JetBrains Mono',monospace;font-size:12px}
+  .asset-row{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 12px;border-bottom:1px solid var(--border);
+    transition:background .1s;
+  }
+  .asset-row:hover{background:var(--surface-2)}
+  .asset-row .method{
+    font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;
+    background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(0,229,255,0.2);flex-shrink:0;
+  }
+  .asset-row .method.POST{background:rgba(255,171,0,0.12);color:var(--warn);border-color:rgba(255,171,0,0.2)}
+  .asset-row .url{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-size:12px}
+  .asset-row .status{font-weight:700;font-size:11px;min-width:36px;text-align:center}
+  .asset-row .status.ok{color:var(--success)} .asset-row .status.err{color:var(--error)} .asset-row .status.redir{color:var(--warn)}
+  .asset-row .meta-btn{
+    background:var(--surface-3);border:1px solid var(--border);border-radius:6px;
+    padding:3px 8px;font-size:11px;color:var(--muted);cursor:pointer;
+  }
+  .asset-row .meta-btn:hover{color:var(--text)}
+
+  /* ── code block ── */
+  .code-block{
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  }
+  .code-block .cb-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);
+  }
+  .code-block .cb-head span{font-size:12px;font-weight:600;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .code-block pre{padding:16px;overflow:auto;font-size:12.5px;line-height:1.7;color:#c9d1d9}
+  .code-block pre .kw{color:#ff7ab2}
+  .code-block pre .str{color:#a5ff90}
+  .code-block pre .com{color:#5c6370;font-style:italic}
+  .code-block pre .fn{color:#82aaff}
+  .code-block pre .num{color:#ff9d5c}
+  .code-block pre .op{color:var(--cyan)}
+
+  /* ── cli reference table ── */
+  .cli-table{width:100%;border-collapse:collapse;font-size:13px}
+  .cli-table th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;
+    color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);
+    background:var(--surface-2);font-weight:700;
+  }
+  .cli-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  .cli-table tr:hover td{background:var(--surface-2)}
+  .cli-table code{
+    background:var(--surface-3);border:1px solid var(--border);border-radius:6px;
+    padding:2px 6px;font-size:12px;color:var(--cyan);
+  }
+  .cli-table .desc{color:var(--muted);font-size:12.5px}
+  .cli-table .def{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+
+  /* ── arch diagram ── */
+  .arch{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;
+    overflow:auto;
+  }
+  .arch-diagram{
+    display:flex;align-items:center;gap:0;justify-content:center;flex-wrap:wrap;
+    font-family:'JetBrains Mono',monospace;font-size:11px;min-width:600px;
+  }
+  .arch-node{
+    background:var(--surface-2);border:1px solid var(--border-strong);border-radius:10px;
+    padding:12px 16px;text-align:center;min-width:120px;position:relative;
+  }
+  .arch-node strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
+  .arch-node span{color:var(--muted);font-size:10px}
+  .arch-node.hl{border-color:rgba(0,229,255,0.3);box-shadow:0 0 16px var(--cyan-glow)}
+  .arch-node.hl strong{color:var(--cyan)}
+  .arch-arrow{color:var(--dim);font-size:14px;padding:0 8px;flex-shrink:0}
+  .arch-stack{display:flex;flex-direction:column;gap:8px}
+
+  /* ── footer ── */
+  .footer{
+    border-top:1px solid var(--border);padding:24px 0;margin-top:24px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    font-size:12px;color:var(--muted);
+  }
+  .footer a{color:var(--muted);transition:color .15s}
+  .footer a:hover{color:var(--text)}
+  .footer .links{display:flex;gap:16px}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="bg-glow-2"></div>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-mark">◈</div>
+      <div class="logo-text">
+        <div><strong>RASED</strong> <span class="ver">v1.2.0</span></div>
+        <span>Headless Recon Engine — Detectify Inspired</span>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="#playground" class="active">Playground</a>
+      <a href="#features">Features</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#cli">CLI Reference</a>
+      <a href="#" onclick="event.preventDefault();document.getElementById('install').scrollIntoView({behavior:'smooth'})">Docs</a>
+      <a class="nav-cta" href="https://github.com/abduallahJamal/rased" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div>
+      <div class="hero-badge">
+        <span class="dot"></span>
+        <span><b>NEW</b> &nbsp;—&nbsp; Chromium 124 • Playwright 1.63 • asyncio worker pool</span>
+      </div>
+      <h1>Automate<br>web <span class="grad">reconnaissance</span><br>at scale.</h1>
+      <p class="desc">
+        Production-grade CLI tool inspired by Detectify's <code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--cyan)">page-fetch</code>.
+        Pipe URLs, intercept every network request, mirror assets with full metadata, and execute JavaScript in page context — all from a headless Chromium engine.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="document.getElementById('playground').scrollIntoView({behavior:'smooth'})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Launch Playground
+        </button>
+        <button class="btn-secondary" onclick="document.querySelector('.term-body').scrollIntoView({behavior:'smooth', block:'center'})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M7 8l3 3-3 3"/><path d="M12 16h5"/></svg>
+          View Quickstart
+        </button>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><strong class="cyan">~2.1k</strong><span>Assets / minute</span></div>
+        <div class="hstat"><strong class="mag">∞</strong><span>Filter combos</span></div>
+        <div class="hstat"><strong class="lime">3.1s</strong><span>Avg. page fetch</span></div>
+      </div>
+    </div>
+
+    <!-- ── HERO TERMINAL ── -->
+    <div class="hero-card" id="install">
+      <div class="card-topbar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M7 8l3 3-3 3"/><path d="M12 16h5"/></svg>
+          zsh — rased
+        </div>
+        <div class="actions">
+          <button onclick="copyCmd(this)" data-cmd="cat urls.txt | rased -c 5 -o recon">copy</button>
+        </div>
+      </div>
+      <div class="term-body mono">
+        <div class="term-line"><span class="term-prompt">❯</span><span class="term-cmd">git clone https://github.com/abduallahJamal/rased.git && cd rased && pip install -e .</span></div>
+        <div class="term-line"><span class="term-output term-success">✔ Chromium 124.0 installed — /opt/playwright/browsers/chromium-1247</span></div>
+        <div style="height:8px"></div>
+        <div class="term-line"><span class="term-prompt">❯</span><span class="term-cmd">cat urls.txt | rased -c 5 -o recon --no-third-party -v</span></div>
+        <div class="term-line"><span class="term-output">Targets  : 12 unique URL(s)  •  Workers: 5  •  Timeout: 30s</span></div>
+        <div class="term-line"><span class="term-output"><span class="term-success">✔</span> https://target.com  [200]  1842ms  (24 assets)</span></div>
+        <div class="term-line"><span class="term-output"><span class="term-highlight">  ↳</span> [200] text/html            → target.com/index.html</span></div>
+        <div class="term-line"><span class="term-output"><span class="term-highlight">  ↳</span> [200] application/javascript → target.com/assets/app.3a7f.js</span></div>
+        <div class="term-line"><span class="term-output"><span class="term-highlight">  ↳</span> [200] text/css             → target.com/assets/style.css</span></div>
+        <div class="term-line"><span class="term-output"><span class="term-warn">  ⊘</span> SKIP https://cdn.tracker.io/pixel.js <span class="term-comment">(filtered --no-third-party)</span></span></div>
+        <div class="term-line"><span class="term-output"><span class="term-success">✔</span> https://target.com/login  [200]  2101ms  (18 assets)</span></div>
+        <div class="term-line"><span class="term-output">Done — 12 URLs • 12 ok • 0 failed • 287 assets • 14.2s</span></div>
+        <div style="height:8px"></div>
+        <div class="term-line"><span class="term-prompt">❯</span><span class="term-cmd">echo "https://target.com" | rased -j "document.title"</span></div>
+        <div class="term-line"><span class="term-output" style="color:var(--magenta)">[JS] [https://target.com] Output: Dashboard — Acme Corp</span></div>
+        <div class="term-line"><span class="term-prompt">❯</span><span class="term-cmd">ls recon/target.com/assets/ <span class="cursor"></span></span></div>
+      </div>
+      <div class="install-bar">
+        <code class="mono">git clone https://github.com/abduallahJamal/rased.git && cd rased && pip install -e .</code>
+        <button onclick="navigator.clipboard.writeText('git clone https://github.com/abduallahJamal/rased.git && cd rased && pip install -e .');toast('Copied')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v3"/></svg>
+          Copy
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ── -->
+  <section class="section" id="features">
+    <div class="section-head">
+      <div><h2>Everything for <em>recon</em> — nothing you don't need</h2><p>Seven subsystems, one binary. Built for bug-bounty hunters, red teams, and asset discovery pipelines.</p></div>
+      <a href="#cli">Explore CLI →</a>
+    </div>
+    <div class="feature-grid">
+      <div class="fcard">
+        <div class="icon cyan">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </div>
+        <h3>Worker-Pool Concurrency</h3>
+        <p>Configurable pool with <code>-c</code> workers and <code>-d</code> inter-request delay. Graceful shutdown on <code>SIGINT</code> with Chromium cleanup.</p>
+        <span class="tag cyan">-c 3 • -d 200 • -t 30000</span>
+      </div>
+      <div class="fcard">
+        <div class="icon magenta">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M12 8v2"/><path d="M12 14v2"/></svg>
+        </div>
+        <h3>Full Network Interception</h3>
+        <p>Hooks every <code>response</code> event during rendering — XHR, fetch, scripts, stylesheets, fonts, images — with headers + timing + body.</p>
+        <span class="tag magenta">page.on('response') • latency_ms</span>
+      </div>
+      <div class="fcard">
+        <div class="icon lime">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13H8"/><path d="M16 13H12"/><path d="M10 17H8"/><path d="M16 17H12"/></svg>
+        </div>
+        <h3>Mirrored Storage + .meta</h3>
+        <p>Reconstructs URL tree to <code>out/&lt;host&gt;/&lt;path&gt;</code> and writes sidecar <code>.meta</code> JSON: headers, CSP, status, timestamp, latency.</p>
+        <span class="tag lime">out/&lt;host&gt; + .meta JSON</span>
+      </div>
+      <div class="fcard">
+        <div class="icon purple">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>JS Execution Engine</h3>
+        <p>Evaluate any JS in page context after load: <code>-j "document.title"</code>, DOM scraping, telemetry, endpoint harvesting. Safe serialization.</p>
+        <span class="tag magenta">-j "expr" → stdout</span>
+      </div>
+      <div class="fcard">
+        <div class="icon orange">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
+        </div>
+        <h3>Scope & Filtering</h3>
+        <p><code>--exclude</code> / <code>--include</code> by MIME or substring, <code>--no-third-party</code> same-site only, <code>--third-party</code> external only.</p>
+        <span class="tag cyan">--exclude image/ • --no-third-party</span>
+      </div>
+      <div class="fcard">
+        <div class="icon green">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><circle cx="12" cy="14" r="2"/></svg>
+        </div>
+        <h3>Proxy & TLS Control</h3>
+        <p>Route through Burp/ZAP via <code>-p http://127.0.0.1:8080</code> (HTTP/SOCKS5) with <code>-k</code> to ignore cert errors for interception.</p>
+        <span class="tag lime">-p proxy • -k insecure</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PLAYGROUND ── -->
+  <section class="section" id="playground">
+    <div class="section-head">
+      <div><h2>Interactive <em>Playground</em></h2><p>Run Rased live — no install required. Fetches run in a sandboxed Chromium on the server.</p></div>
+      <div class="pill"><strong id="pg-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;box-shadow:0 0 6px var(--success)"></strong> Engine ready • Chromium 124</div>
+    </div>
+
+    <div class="playground">
+      <div class="pg-header">
+        <h3><i></i> rased playground</h3>
+        <div class="pg-actions">
+          <span class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Sandbox</span>
+          <span class="pill" id="pg-timing">idle</span>
+        </div>
+      </div>
+
+      <div class="pg-body">
+        <!-- LEFT CONTROLS -->
+        <div class="pg-left">
+          <div class="field">
+            <label>Target URL(s)</label>
+            <textarea id="pg-urls" rows="3" placeholder="https://example.com&#10;https://httpbin.org/html">https://example.com</textarea>
+            <div class="hint">One per line — bare domains auto-normalised to https://</div>
+          </div>
+
+          <div class="presets">
+            <button class="preset" onclick="setPreset('https://example.com')">example.com</button>
+            <button class="preset" onclick="setPreset('https://httpbin.org/html')">httpbin HTML</button>
+            <button class="preset" onclick="setPreset('https://quotes.toscrape.com')">quotes</button>
+            <button class="preset" onclick="setPreset('https://books.toscrape.com')">books</button>
+          </div>
+
+          <div class="field">
+            <label>JavaScript expression <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--dim)">(optional)</span></label>
+            <input id="pg-js" type="text" placeholder='document.title' value="document.title">
+            <div class="presets" style="margin-top:8px">
+              <button class="preset" onclick="setJS('document.title')">title</button>
+              <button class="preset" onclick="setJS('document.documentElement.outerHTML.slice(0,300)')">html slice</button>
+              <button class="preset" onclick="setJS('Array.from(document.scripts).map(s=>s.src)')">scripts</button>
+              <button class="preset" onclick="setJS('performance.getEntries().map(e=>e.name).slice(0,5)')">perf entries</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field">
+              <label>Workers (-c)</label>
+              <select id="pg-concurrency">
+                <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="5">5</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Delay ms (-d)</label>
+              <select id="pg-delay">
+                <option value="0" selected>0</option><option value="200">200</option><option value="500">500</option><option value="1000">1000</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Filter</label>
+            <input id="pg-exclude" type="text" placeholder='--exclude image/ (comma separated)'>
+            <div class="hint">e.g. <code>image/, font/</code> — substring match on MIME/URL</div>
+          </div>
+
+          <div class="toggles">
+            <div class="toggle" id="toggle-no3p" onclick="this.classList.toggle('active')">
+              <div><div class="label">Same-site only</div><div class="sub">--no-third-party</div></div>
+              <div class="switch"></div>
+            </div>
+            <div class="toggle" id="toggle-3p" onclick="this.classList.toggle('active')">
+              <div><div class="label">Third-party only</div><div class="sub">--third-party</div></div>
+              <div class="switch"></div>
+            </div>
+            <div class="toggle" id="toggle-verbose" onclick="this.classList.toggle('active')">
+              <div><div class="label">Verbose logging</div><div class="sub">-v — show each asset</div></div>
+              <div class="switch"></div>
+            </div>
+          </div>
+
+          <button class="run-btn" id="pg-run" onclick="runPlayground()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span id="pg-run-label">Fetch Pages</span>
+          </button>
+          <div class="hint" style="text-align:center">Powered by <code>rased</code> + Playwright Chromium • Results shown below</div>
+        </div>
+
+        <!-- RIGHT OUTPUT -->
+        <div class="pg-right">
+          <div class="tabs">
+            <div class="tab active" data-tab="console" onclick="switchTab('console')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M7 8l3 3-3 3"/><path d="M12 16h5"/></svg>
+              Console
+              <span class="badge" id="console-badge">0</span>
+            </div>
+            <div class="tab" data-tab="assets" onclick="switchTab('assets')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Assets
+              <span class="badge" id="assets-badge">0</span>
+            </div>
+            <div class="tab" data-tab="js" onclick="switchTab('js')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              JS Output
+            </div>
+            <div class="tab" data-tab="meta" onclick="switchTab('meta')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              .meta JSON
+            </div>
+          </div>
+
+          <div class="pg-content" id="pg-content">
+            <!-- Console tab -->
+            <div class="tab-pane active" id="pane-console">
+              <div class="pg-placeholder" id="console-placeholder">
+                <div class="icon">◈</div>
+                <h4>Ready to fetch</h4>
+                <p>Enter a URL and hit <b>Fetch Pages</b>. Real Chromium will load the page, intercept every request, and stream results here.</p>
+                <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                  <span style="background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-size:11px;font-family:'JetBrains Mono',monospace">cat urls.txt | rased</span>
+                  <span style="background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-size:11px;font-family:'JetBrains Mono',monospace">-j "document.title"</span>
+                </div>
+              </div>
+              <div class="term-out" id="term-out" style="display:none"></div>
+            </div>
+            <!-- Assets tab -->
+            <div class="tab-pane" id="pane-assets" style="display:none">
+              <div class="pg-placeholder" id="assets-placeholder">
+                <div class="icon">◈</div>
+                <h4>No assets yet</h4>
+                <p>Captured resources will appear here — method, status, MIME, and saved path.</p>
+              </div>
+              <div class="asset-tree" id="asset-tree" style="display:none"></div>
+            </div>
+            <!-- JS tab -->
+            <div class="tab-pane" id="pane-js" style="display:none">
+              <div class="pg-placeholder" id="js-placeholder">
+                <div class="icon">⚡</div>
+                <h4>No JS evaluation yet</h4>
+                <p>Add a JavaScript expression on the left (e.g. <code>document.title</code>) and run.</p>
+              </div>
+              <div id="js-output" style="display:none"></div>
+            </div>
+            <!-- Meta tab -->
+            <div class="tab-pane" id="pane-meta" style="display:none">
+              <div class="pg-placeholder" id="meta-placeholder">
+                <div class="icon">⬡</div>
+                <h4>.meta sidecars</h4>
+                <p>Every saved file gets a companion <code>.meta</code> JSON with full telemetry. They'll appear here.</p>
+              </div>
+              <div id="meta-output" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ARCHITECTURE ── -->
+  <section class="section" id="architecture">
+    <div class="section-head">
+      <div><h2>System <em>Architecture</em></h2><p>Four modules, one asyncio event loop, zero crashes. Each page runs in an isolated BrowserContext.</p></div>
+    </div>
+    <div class="arch">
+      <div class="arch-diagram">
+        <div class="arch-stack">
+          <div class="arch-node"><strong>stdin / -f file</strong><span>urls.txt, pipe, args</span></div>
+          <div style="text-align:center;color:var(--dim);font-size:10px">dedupe • normalise</div>
+          <div class="arch-node hl"><strong>CLI Parser</strong><span>cli.py • argparse</span></div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node hl"><strong>RasedConfig</strong><span>config.py<br>typed dataclass</span></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node hl" style="background:rgba(0,229,255,0.08)"><strong>WorkerPool</strong><span>worker.py<br>Queue + Semaphore<br>c=N • delay • SIGINT</span></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-stack">
+          <div class="arch-node hl"><strong>BrowserManager</strong><span>browser.py<br>Playwright + Chromium<br>proxy • -k • UA</span></div>
+          <div class="arch-node" style="margin-top:8px"><strong>page.on("response")</strong><span>intercept • latency<br>body + headers</span></div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-stack">
+          <div class="arch-node"><strong>StorageHandler</strong><span>storage.py<br>url_to_local_path()</span></div>
+          <div class="arch-node"><strong>out/&lt;host&gt;/&lt;path&gt;</strong><span>+ .meta JSON sidecar</span></div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="border-color:rgba(180,255,57,0.3);background:rgba(180,255,57,0.06)"><strong>JS Engine</strong><span>-j "expr"<br>page.evaluate()<br>→ [JS] stdout</span></div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <span style="font-size:11px;color:var(--muted)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--cyan);margin-right:4px;vertical-align:middle"></span> Core modules</span>
+        <span style="font-size:11px;color:var(--muted)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--surface-3);border:1px solid var(--border);margin-right:4px;vertical-align:middle"></span> I/O / storage</span>
+        <span style="font-size:11px;color:var(--muted)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(180,255,57,0.2);margin-right:4px;vertical-align:middle"></span> Execution</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="code-block">
+        <div class="cb-head"><span>rased/config.py</span><span style="font-size:11px;color:var(--cyan)">dataclass • validation</span></div>
+        <pre><span class="kw">@dataclass</span>(<span class="str">slots=True</span>)
+<span class="kw">class</span> <span class="fn">RasedConfig</span>:
+    urls: <span class="fn">List</span>[<span class="fn">str</span>]
+    concurrency: <span class="fn">int</span> = <span class="num">3</span>
+    delay_ms: <span class="fn">int</span> = <span class="num">0</span>
+    timeout_ms: <span class="fn">int</span> = <span class="num">30000</span>
+    exclude: <span class="fn">List</span>[<span class="fn">str</span>] = <span class="kw">field</span>(<span class="str">default_factory=list</span>)
+    no_third_party: <span class="fn">bool</span> = <span class="kw">False</span>
+
+    <span class="kw">def</span> <span class="fn">validate</span>(<span class="kw">self</span>):
+        <span class="kw">if</span> <span class="kw">self</span>.concurrency &lt; <span class="num">1</span>: <span class="kw">raise</span> <span class="fn">ValueError</span>(...)
+        <span class="com"># dedupe preserving order + https:// normalise</span>
+        ...</pre>
+      </div>
+      <div class="code-block">
+        <div class="cb-head"><span>rased/storage.py</span><span style="font-size:11px;color:var(--lime)">atomic • .meta</span></div>
+        <pre><span class="kw">async def</span> <span class="fn">save</span>(<span class="kw">self</span>, url, body, ...):
+    <span class="com"># filtering</span>
+    ok, reason = <span class="kw">self</span>.config.<span class="fn">should_save</span>(mime, host)
+    <span class="kw">if not</span> ok: <span class="kw">return None</span>
+
+    local = <span class="fn">url_to_local_path</span>(url, <span class="kw">self</span>.output)
+    <span class="kw">async with</span> <span class="kw">self</span>._lock:
+        <span class="kw">if not</span> overwrite: local = <span class="fn">incremental_path</span>(local)
+        <span class="kw">await</span> <span class="fn">write</span>(local, body)
+        <span class="kw">await</span> <span class="fn">write</span>(local + <span class="str">".meta"</span>, json.<span class="fn">dumps</span>(meta))</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CLI REFERENCE ── -->
+  <section class="section" id="cli">
+    <div class="section-head">
+      <div><h2>CLI <em>Reference</em></h2><p>All flags, with examples. The tool mirrors Detectify page-fetch ergonomics exactly.</p></div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+      <div style="padding:14px 18px;background:var(--surface-2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700">rased --help</span>
+        <span style="font-size:11px;color:var(--muted)">Click any row to copy the example</span>
+      </div>
+      <div style="overflow:auto">
+        <table class="cli-table">
+          <thead><tr><th>Flag</th><th>Description</th><th>Default</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr onclick="copyText('cat urls.txt | rased')"><td><code>stdin</code></td><td class="desc">Pipe URLs via stdin — <code>cat urls.txt | rased</code></td><td class="def">—</td><td class="def">cat urls.txt | rased</td></tr>
+            <tr onclick="copyText('rased -f urls.txt')"><td><code>-f, --file</code></td><td class="desc">Read URLs from file (one per line, # comments ignored)</td><td class="def">—</td><td class="def">-f urls.txt</td></tr>
+            <tr onclick="copyText('rased -c 5')"><td><code>-c, --concurrency</code></td><td class="desc">Concurrent workers (asyncio pool)</td><td class="def">3</td><td class="def">-c 5</td></tr>
+            <tr onclick="copyText('rased -d 300')"><td><code>-d, --delay</code></td><td class="desc">Delay between requests per worker (ms) — rate limiting</td><td class="def">0</td><td class="def">-d 300</td></tr>
+            <tr onclick="copyText('rased -t 15000')"><td><code>-t, --timeout</code></td><td class="desc">Page navigation timeout (ms)</td><td class="def">30000</td><td class="def">-t 15000</td></tr>
+            <tr onclick="copyText('rased --exclude image/')"><td><code>--exclude</code></td><td class="desc">Skip by MIME/URL substring — repeatable</td><td class="def">—</td><td class="def">--exclude image/ --exclude font/</td></tr>
+            <tr onclick="copyText('rased --include .js')"><td><code>--include</code></td><td class="desc">Whitelist only matching MIME/extension</td><td class="def">—</td><td class="def">--include .js --include javascript</td></tr>
+            <tr onclick="copyText('rased --no-third-party')"><td><code>--no-third-party</code></td><td class="desc">Only save same-site (+ subdomains) — strict scope</td><td class="def">off</td><td class="def">--no-third-party</td></tr>
+            <tr onclick="copyText('rased --third-party')"><td><code>--third-party</code></td><td class="desc">Invert — only external third-party requests</td><td class="def">off</td><td class="def">--third-party</td></tr>
+            <tr onclick="copyText('rased -j \"document.title\"')"><td><code>-j, --javascript</code></td><td class="desc">JS expression evaluated in page context → <code>[JS] [URL] Output: ...</code></td><td class="def">—</td><td class="def">-j "document.title"</td></tr>
+            <tr onclick="copyText('rased -p http://127.0.0.1:8080 -k')"><td><code>-p, --proxy</code></td><td class="desc">Upstream proxy (HTTP/SOCKS5) — Burp/ZAP compatible</td><td class="def">—</td><td class="def">-p http://127.0.0.1:8080</td></tr>
+            <tr onclick="copyText('rased -k')"><td><code>-k, --insecure</code></td><td class="desc">Ignore TLS errors (needed with intercepting proxies)</td><td class="def">off</td><td class="def">-k</td></tr>
+            <tr onclick="copyText('rased -o recon -w')"><td><code>-o, --output</code></td><td class="desc">Output directory — mirrors <code>&lt;host&gt;/&lt;path&gt;</code></td><td class="def">out</td><td class="def">-o recon</td></tr>
+            <tr onclick="copyText('rased -w')"><td><code>-w, --overwrite</code></td><td class="desc">Overwrite existing files (default: incremental <code>script.1.js</code>)</td><td class="def">off</td><td class="def">-w</td></tr>
+            <tr onclick="copyText('rased -v')"><td><code>-v, --verbose</code></td><td class="desc">Verbose — log each saved asset</td><td class="def">off</td><td class="def">-v</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:12px 18px;background:var(--bg);border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--dim)">Quick recipes:</span>
+        <code style="font-size:11px;background:var(--surface-2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;cursor:pointer" onclick="copyText('cat urls.txt | rased -c 5 -d 200 --exclude image/ -o recon')">cat urls.txt | rased -c 5 --exclude image/ -o recon</code>
+        <code style="font-size:11px;background:var(--surface-2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;cursor:pointer" onclick="copyText('echo https://target.com | rased -j &quot;Array.from(document.scripts).map(s=>s.src)&quot;')">-j "Array.from(document.scripts).map(s=&gt;s.src)"</code>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="code-block">
+        <div class="cb-head"><span>Output structure — out/&lt;host&gt;/&lt;path&gt; + .meta</span></div>
+        <pre>out/
+├── <span class="op">target.com</span>/
+│   ├── index.html
+│   ├── index.html.<span class="str">meta</span>       <span class="com"># JSON: url, headers, status, timing</span>
+│   ├── assets/
+│   │   ├── app.3a7f2.js
+│   │   ├── app.3a7f2.js.<span class="str">meta</span>
+│   │   └── style.css
+│   └── api/
+│       └── config.json
+└── <span class="op">cdn.example.net</span>/        <span class="com"># third-party if not filtered</span>
+    └── lib.js</pre>
+      </div>
+      <div class="code-block">
+        <div class="cb-head"><span>.meta JSON — per-resource telemetry</span></div>
+        <pre>{
+  <span class="str">"url"</span>: <span class="str">"https://target.com/assets/app.js"</span>,
+  <span class="str">"method"</span>: <span class="str">"GET"</span>,
+  <span class="str">"request_headers"</span>: { <span class="str">"user-agent"</span>: <span class="str">"Rased/1.2.0"</span> },
+  <span class="str">"response"</span>: {
+    <span class="str">"status"</span>: <span class="num">200</span>,
+    <span class="str">"headers"</span>: {
+      <span class="str">"content-type"</span>: <span class="str">"application/javascript"</span>,
+      <span class="str">"csp"</span>: <span class="str">"default-src 'self'"</span>,
+      <span class="str">"cache-control"</span>: <span class="str">"max-age=31536000"</span>
+    }
+  },
+  <span class="str">"timestamp"</span>: <span class="str">"2026-10-24T08:30:00Z"</span>,
+  <span class="str">"latency_ms"</span>: <span class="num">87</span>,
+  <span class="str">"size_bytes"</span>: <span class="num">48291</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PROJECT STRUCTURE ── -->
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Project <em>Structure</em></h2><p>Modular, typed, tested — each file owns one concern. Clone and extend.</p></div>
+      <a href="#" onclick="event.preventDefault();toast('Clone: git clone https://github.com/abduallahJamal/rased')">git clone →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:360px 1fr;gap:14px">
+      <div class="code-block" style="align-self:start">
+        <div class="cb-head"><span>rased/</span><span style="font-size:11px;color:var(--muted)">pyproject.toml • Python 3.11+</span></div>
+        <pre style="font-size:11.5px">rased/
+├── <span class="op">pyproject.toml</span>          <span class="com"># pkg metadata, scripts</span>
+├── <span class="op">requirements.txt</span>
+├── <span class="op">README.md</span>
+├── <span class="op">rased/</span>
+│   ├── __init__.py
+│   ├── __main__.py              <span class="com"># python -m rased</span>
+│   ├── <span class="fn">cli.py</span>                   <span class="com"># flags + async_main</span>
+│   ├── <span class="fn">config.py</span>                <span class="com"># RasedConfig dataclass</span>
+│   ├── <span class="fn">logger.py</span>                <span class="com"># Rich logger, [JS] stdout</span>
+│   ├── <span class="fn">utils.py</span>                 <span class="com"># url→path, sanitise</span>
+│   ├── <span class="fn">storage.py</span>               <span class="com"># StorageHandler + .meta</span>
+│   ├── <span class="fn">browser.py</span>               <span class="com"># BrowserManager + intercept</span>
+│   └── <span class="fn">worker.py</span>                <span class="com"># WorkerPool + SIGINT</span>
+└── <span class="op">dashboard/</span>
+    ├── index.html               <span class="com"># this UI</span>
+    └── server.py                <span class="com"># playground API</span></pre>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="code-block">
+          <div class="cb-head"><span>Graceful shutdown — SIGINT / SIGTERM</span></div>
+          <pre><span class="kw">def</span> <span class="fn">_install_signal_handlers</span>(<span class="kw">self</span>):
+    loop = asyncio.<span class="fn">get_running_loop</span>()
+    <span class="kw">for</span> sig <span class="kw">in</span> (signal.SIGINT, signal.SIGTERM):
+        loop.<span class="fn">add_signal_handler</span>(sig, <span class="kw">self</span>._shutdown.<span class="fn">set</span>)
+
+<span class="kw">async def</span> <span class="fn">stop</span>(<span class="kw">self</span>):
+    <span class="kw">await self</span>._browser.<span class="fn">close</span>()
+    <span class="kw">await self</span>._playwright.<span class="fn">stop</span>()
+    <span class="com"># Chromium processes reaped — no zombies</span></pre>
+        </div>
+        <div class="code-block">
+          <div class="cb-head"><span>Installation — 30 seconds</span></div>
+          <pre><span class="com"># 1. Create venv</span>
+python3 -m venv .venv && <span class="kw">source</span> .venv/bin/activate
+
+<span class="com"># 2. Install package</span>
+pip install -e .                 <span class="com"># + rich, aiofiles, playwright</span>
+
+<span class="com"># 3. Install Chromium</span>
+playwright install chromium
+<span class="com"># or: playwright install --with-deps chromium</span>
+
+<span class="com"># 4. Verify</span>
+echo <span class="str">"https://example.com"</span> | rased -v
+<span class="com"># ✔ out/example.com/index.html + .meta</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div>© 2026 Abduallah Jamal · Rased (راصد) — Inspired by Detectify <code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:11px">page-fetch</code> • MIT License • Built with Playwright + asyncio + Chromium</div>
+    <div class="links">
+      <a href="https://github.com/abduallahJamal/rased" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/abduallahJamal/rased#readme" target="_blank" rel="noopener">Docs (EN)</a>
+      <a href="https://github.com/abduallahJamal/rased/blob/main/README.ar.md" target="_blank" rel="noopener">التوثيق بالعربية</a>
+      <a href="https://github.com/abduallahJamal/rased/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+  </footer>
+
+</div>
+
+<!-- toast -->
+<div id="toast" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text);padding:10px 18px;border-radius:99px;font-size:13px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4)">Copied</div>
+
+<script>
+// ── toast ──
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(20px)'},2200);
+}
+function copyText(txt){ navigator.clipboard.writeText(txt); toast('Copied: '+txt.slice(0,48)); }
+function copyCmd(btn){ const c=btn.dataset.cmd; navigator.clipboard.writeText(c); toast('Copied: '+c); }
+function setPreset(url){ document.getElementById('pg-urls').value=url; toast('Preset: '+url); }
+function setJS(expr){ document.getElementById('pg-js').value=expr; toast('JS: '+expr.slice(0,40)); }
+
+// ── tabs ──
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(p=>p.style.display='none');
+  document.getElementById('pane-'+name).style.display='block';
+}
+
+// ── playground fetch ──
+let abortController = null;
+
+async function runPlayground(){
+  const btn = document.getElementById('pg-run');
+  const label = document.getElementById('pg-run-label');
+  if(btn.disabled) return;
+
+  const urlsRaw = document.getElementById('pg-urls').value.trim();
+  if(!urlsRaw){ toast('Enter at least one URL'); return; }
+  const urls = urlsRaw.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  const js = document.getElementById('pg-js').value.trim() || null;
+  const concurrency = parseInt(document.getElementById('pg-concurrency').value);
+  const delay = parseInt(document.getElementById('pg-delay').value);
+  const exclude = document.getElementById('pg-exclude').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const noThirdParty = document.getElementById('toggle-no3p').classList.contains('active');
+  const thirdParty = document.getElementById('toggle-3p').classList.contains('active');
+  const verbose = document.getElementById('toggle-verbose').classList.contains('active');
+
+  if(noThirdParty && thirdParty){ toast('Cannot enable both scope filters'); return; }
+
+  // UI busy state
+  btn.disabled = true;
+  label.textContent = 'Fetching…';
+  btn.style.opacity='0.7';
+  document.getElementById('pg-timing').textContent = 'running…';
+  document.getElementById('pg-timing').style.color = 'var(--cyan)';
+
+  // Show console tab
+  switchTab('console');
+  document.getElementById('console-placeholder').style.display='none';
+  const termOut = document.getElementById('term-out');
+  termOut.style.display='block';
+  termOut.innerHTML = '';
+
+  document.getElementById('assets-placeholder').style.display='none';
+  document.getElementById('asset-tree').style.display='block';
+  document.getElementById('asset-tree').innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Fetching… assets will appear here</div>';
+
+  document.getElementById('js-placeholder').style.display='none';
+  document.getElementById('js-output').style.display='block';
+  document.getElementById('js-output').innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">Evaluating JS…</div>';
+
+  document.getElementById('meta-placeholder').style.display='none';
+  document.getElementById('meta-output').style.display='block';
+  document.getElementById('meta-output').innerHTML = '';
+
+  function addLine(cls, text){
+    const d=document.createElement('div');
+    d.className='line '+cls;
+    d.textContent=text;
+    termOut.appendChild(d);
+    termOut.scrollTop=termOut.scrollHeight;
+  }
+
+  addLine('info', `Targets  : ${urls.length} URL(s)  •  Workers: ${concurrency}  •  Delay: ${delay}ms`);
+  if(js) addLine('dim', `JS expr  : ${js.slice(0,80)}`);
+  if(exclude.length) addLine('dim', `Exclude  : ${exclude.join(', ')}`);
+  if(noThirdParty) addLine('dim', `Scope    : same-site only (--no-third-party)`);
+  if(thirdParty) addLine('dim', `Scope    : third-party only (--third-party)`);
+  addLine('dim', `Output   : /tmp/playground/out`);
+  addLine('info', `Enqueueing ${urls.length} URL(s) with concurrency=${concurrency}`);
+  addLine('info', `Launching Chromium (headless=true)...`);
+  addLine('success', `✔ Chromium launched`);
+
+  urls.forEach(u=> addLine('info', `[W1] → Fetching ${u}`));
+
+  let startTime = Date.now();
+  let timer = setInterval(()=>{
+    const elapsed = ((Date.now()-startTime)/1000).toFixed(1);
+    document.getElementById('pg-timing').textContent = elapsed+'s';
+  }, 100);
+
+  try {
+    const payload = { urls, concurrency, delay, exclude, include: [], no_third_party: noThirdParty, third_party: thirdParty, javascript: js, timeout: 20000, verbose };
+    const res = await fetch('/api/fetch', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    clearInterval(timer);
+    const elapsed = ((Date.now()-startTime)/1000).toFixed(1);
+    document.getElementById('pg-timing').textContent = elapsed+'s • done';
+    document.getElementById('pg-timing').style.color = 'var(--success)';
+
+    if(!res.ok){
+      const err = await res.text();
+      addLine('error', `✖ Request failed: ${res.status} — ${err.slice(0,200)}`);
+      label.textContent = 'Fetch Pages';
+      btn.disabled=false; btn.style.opacity='1';
+      return;
+    }
+    const data = await res.json();
+
+    // Console lines from server
+    if(data.logs){
+      data.logs.forEach(l=>{
+        if(l.type==='js') addLine('js', `[JS] [${l.url}] ${l.text}`);
+        else if(l.type==='success') addLine('success', l.text);
+        else if(l.type==='error') addLine('error', l.text);
+        else addLine(l.type||'dim', l.text);
+      });
+    }
+    // Per-URL done lines
+    if(data.results){
+      data.results.forEach(r=>{
+        if(r.ok) addLine('success', `[W1] ✓ ${r.url}  [${r.status||200}]  ${r.elapsed_ms}ms  (${r.assets} assets)`);
+        else addLine('error', `[W1] ✖ ${r.url}  —  ${r.error}`);
+      });
+      const ok = data.results.filter(r=>r.ok).length;
+      const failed = data.results.length - ok;
+      const totalAssets = data.results.reduce((a,r)=>a+(r.assets||0),0);
+      addLine('success', `Done — ${data.results.length} URLs  •  ${ok} ok  •  ${failed} failed  •  ${totalAssets} assets  •  ${elapsed}s`);
+      document.getElementById('console-badge').textContent = data.results.length;
+      document.getElementById('assets-badge').textContent = totalAssets;
+    }
+
+    // Assets
+    const tree = document.getElementById('asset-tree');
+    if(data.assets && data.assets.length){
+      tree.innerHTML = '';
+      data.assets.forEach(a=>{
+        const row=document.createElement('div');
+        row.className='asset-row';
+        const sc = a.status>=400 ? 'err' : a.status>=300 ? 'redir' : 'ok';
+        const method = a.method||'GET';
+        row.innerHTML = `
+          <span class="method ${method}">${method}</span>
+          <span class="url" title="${a.url}">${a.url}</span>
+          <span class="status ${sc}">${a.status}</span>
+          <span style="font-size:11px;color:var(--muted);min-width:70px;text-align:right">${a.mime? a.mime.split(';')[0].slice(0,22): ''}</span>
+          <button class="meta-btn" onclick="showMeta('${encodeURIComponent(a.url)}')">.meta</button>
+        `;
+        row._meta = a;
+        tree.appendChild(row);
+      });
+      // store for meta view
+      window._lastAssets = data.assets;
+      buildMetaView(data.assets);
+    } else {
+      tree.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No assets captured (filtered or empty page)</div>';
+    }
+
+    // JS output
+    const jsOut = document.getElementById('js-output');
+    if(data.js_outputs && data.js_outputs.length){
+      jsOut.innerHTML = data.js_outputs.map(j=>`
+        <div style="margin:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+          <div style="padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--magenta)">[JS] [${j.url}]</div>
+          <pre style="padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:pre-wrap;word-break:break-all;color:var(--text);max-height:200px;overflow:auto">${escapeHtml(j.output||j.error||'(empty)')}</pre>
+        </div>
+      `).join('');
+    } else if(js){
+      jsOut.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No JS output (expression may have returned undefined or errored)</div>';
+    } else {
+      jsOut.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No JS expression provided — add one on the left</div>';
+    }
+
+  } catch(e){
+    clearInterval(timer);
+    addLine('error', `✖ Network error: ${e.message}`);
+    document.getElementById('pg-timing').textContent='error';
+    document.getElementById('pg-timing').style.color='var(--error)';
+  } finally {
+    label.textContent='Fetch Pages';
+    btn.disabled=false; btn.style.opacity='1';
+  }
+}
+
+function escapeHtml(s){
+  const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+}
+function buildMetaView(assets){
+  const out=document.getElementById('meta-output');
+  if(!assets.length){ out.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No .meta files</div>'; return; }
+  out.innerHTML = assets.map((a,i)=>`
+    <div style="margin:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)">${a.url.slice(0,80)}</span>
+        <span style="font-size:11px;background:${a.status>=400?'var(--error)':'var(--success)'};color:#fff;padding:2px 8px;border-radius:99px;font-weight:700">${a.status}</span>
+      </div>
+      <pre style="padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:#c9d1d9;overflow:auto;max-height:260px;white-space:pre-wrap">${escapeHtml(JSON.stringify({
+        url: a.url, method: a.method, status: a.status,
+        request_headers: a.request_headers, response_headers: a.response_headers,
+        timestamp: a.timestamp, latency_ms: a.latency_ms, size_bytes: a.size_bytes,
+        saved_to: a.saved_to
+      }, null, 2))}</pre>
+    </div>
+  `).join('');
+}
+function showMeta(encUrl){
+  switchTab('meta');
+  // highlight matching meta entry
+  setTimeout(()=>{
+    const url = decodeURIComponent(encUrl);
+    const idx = (window._lastAssets||[]).findIndex(a=>a.url===url);
+    if(idx>=0){
+      const el=document.getElementById('meta-output').children[idx];
+      if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline='1px solid var(--cyan)'; setTimeout(()=>el.style.outline='',2000); }
+    }
+  },100);
+}
+</script>
+</body>
+</html>

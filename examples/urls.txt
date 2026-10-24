@@ -1,0 +1,9 @@
+# Example target list — Rased recon demo
+# Lines starting with # are ignored
+# Bare domains auto-normalised to https://
+
+https://example.com
+https://httpbin.org/html
+https://quotes.toscrape.com
+https://books.toscrape.com
+https://httpbin.org/json

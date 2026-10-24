@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340" role="img" aria-label="rased — Headless Chromium Reconnaissance Engine">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1220"/>
+      <stop offset="55%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#12224A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="50%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#22C55E"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="340" fill="url(#bg)"/>
+  <rect width="1200" height="340" fill="url(#glow)"/>
+
+  <!-- grid texture -->
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+    <path d="M0 60H1200M0 120H1200M0 180H1200M0 240H1200M0 300H1200"/>
+    <path d="M60 0V340M240 0V340M420 0V340M600 0V340M780 0V340M960 0V340M1140 0V340"/>
+  </g>
+
+  <!-- subtle recon radar rings top-right -->
+  <g transform="translate(1070, 96)" fill="none" stroke="#00E5FF">
+    <circle r="54" stroke-opacity="0.14" stroke-width="1.5"/>
+    <circle r="36" stroke-opacity="0.22" stroke-width="1.5"/>
+    <circle r="18" stroke-opacity="0.32" stroke-width="1.5"/>
+    <line x1="-60" y1="0" x2="60" y2="0" stroke-opacity="0.12" stroke-width="1"/>
+    <line x1="0" y1="-60" x2="0" y2="60" stroke-opacity="0.12" stroke-width="1"/>
+    <line x1="0" y1="0" x2="38" y2="-38" stroke="#22C55E" stroke-opacity="0.55" stroke-width="2"/>
+    <circle cx="24" cy="-24" r="4" fill="#22C55E" stroke="none"/>
+    <circle cx="0" cy="0" r="3.5" fill="#00E5FF" stroke="none"/>
+  </g>
+
+  <!-- accent rule -->
+  <rect x="72" y="58" width="76" height="5" rx="2.5" fill="url(#accent)"/>
+
+  <text x="72" y="122" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="46" font-weight="800" fill="#F1F5F9">
+    rased
+  </text>
+  <text x="218" y="120" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="700" fill="#38BDF8" letter-spacing="1.2">
+    HEADLESS RECON ENGINE · v1.2.0
+  </text>
+  <text x="72" y="166" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="19" fill="#94A3B8">
+    Playwright Chromium reconnaissance CLI + Web Playground — Network Interception · Asset Mirroring · JS Telemetry
+  </text>
+
+  <!-- cards -->
+  <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+    <g>
+      <rect x="72" y="210" width="248" height="90" rx="14" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="72" y="210" width="5" height="90" rx="2.5" fill="#00E5FF"/>
+      <text x="96" y="245" font-size="18" font-weight="700" fill="#E2E8F0">rased CLI</text>
+      <text x="96" y="273" font-size="13" fill="#94A3B8">Asyncio Worker Pool &amp; Piping</text>
+    </g>
+    <g>
+      <rect x="342" y="210" width="248" height="90" rx="14" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="342" y="210" width="5" height="90" rx="2.5" fill="#818CF8"/>
+      <text x="366" y="245" font-size="18" font-weight="700" fill="#E2E8F0">asset-mirror</text>
+      <text x="366" y="273" font-size="13" fill="#94A3B8">Origin Tree + .meta Sidecars</text>
+    </g>
+    <g>
+      <rect x="612" y="210" width="248" height="90" rx="14" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="612" y="210" width="5" height="90" rx="2.5" fill="#A78BFA"/>
+      <text x="636" y="245" font-size="18" font-weight="700" fill="#E2E8F0">js-telemetry</text>
+      <text x="636" y="273" font-size="13" fill="#94A3B8">In-Page JS Eval &amp; Proxy/TLS</text>
+    </g>
+    <g>
+      <rect x="882" y="210" width="246" height="90" rx="14" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect x="882" y="210" width="5" height="90" rx="2.5" fill="#22C55E"/>
+      <text x="906" y="245" font-size="18" font-weight="700" fill="#E2E8F0">playground</text>
+      <text x="906" y="273" font-size="13" fill="#94A3B8">Interactive Web Recon UI</text>
+    </g>
+  </g>
+</svg>
